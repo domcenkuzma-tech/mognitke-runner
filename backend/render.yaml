@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: magnitke-runner-api
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: MINI_APP_URL
+        sync: false
+      - key: OWNER_ID
+        sync: false
+      - key: DATABASE_PATH
+        value: /var/data/magnitke.db
+    disk:
+      name: magnitke-data
+      mountPath: /var/data
+      sizeGB: 1
