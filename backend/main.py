@@ -118,18 +118,37 @@ def buy_character(payload: CharacterPayload) -> dict[str, Any]:
     return user_dict(row)
 
 
+# ОБНОВЛЕННАЯ КОМАНДА С АВТОУДАЛЕНИЕМ КНОПКИ
 @router.message(Command("game"))
 async def game_command(message: Message) -> None:
     if not bot:
         return
+        
+    # Сразу удаляем саму команду /game от пользователя, чтобы не спамить в чате
     try:
         await message.delete()
     except Exception:
         pass
+        
     if message.from_user and message.from_user.id != OWNER_ID:
         return
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Открыть Магнитке Runner", web_app=WebAppInfo(url=MINI_APP_URL))]])
-    await message.answer("Ночной забег начинается. Собери больше МОГнеток, чем вся группа.", reply_markup=keyboard)
+        
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="Открыть Магнитке Runner 🎮", web_app=WebAppInfo(url=MINI_APP_URL))
+    ]])
+    
+    # Отправляем кнопку запуска в чат
+    bot_message = await message.answer(
+        "Ночной забег начинается. Собери больше МОГнеток, чем вся группа.", 
+        reply_markup=keyboard
+    )
+    
+    # Фоновая задача: ждем 15 секунд и удаляем сообщение бота с кнопкой
+    await asyncio.sleep(15)
+    try:
+        await bot_message.delete()
+    except Exception:
+        pass
 
 
 @router.message(Command("stats"))
