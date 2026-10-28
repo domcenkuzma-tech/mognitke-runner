@@ -9,10 +9,8 @@ type GameObject = { x: number; kind: ObstacleKind; scale: number; level: 'low' |
 
 const STORAGE_KEY = 'mognitke-runner-profile';
 const MUTE_KEY = 'mognitke-runner-muted';
-// АДРЕС НАШЕГО РАБОЧЕГО БЭКЕНДА НА HUGGING FACE
 const BACKEND_URL = 'https://iglobrux-mognitke-bot.hf.space';
 
-// Безопасное получение данных пользователя из Telegram WebApp SDK
 const tg = (window as any).Telegram?.WebApp;
 const tgUser = tg?.initDataUnsafe?.user;
 const DEFAULT_USER_ID = tgUser?.id || 99999; 
@@ -154,7 +152,6 @@ function App() {
     const sourceOf = (image: HTMLImageElement) => { cleanWhite(image); return transparentAssets.get(image) || image; };
     const groundY = () => height - Math.max(56, height * 0.12);
     
-    // ОТПРАВКА РЕКОРДА НА БЭКЕНД HUGGING FACE ПРИ ПРОИГРЫШЕ
     const finish = async () => {
       lost = true;
       const finalDistance = Math.floor(distance);
@@ -162,7 +159,6 @@ function App() {
       const next = { ...profileRef.current, maxDistance: Math.max(profileRef.current.maxDistance, finalDistance), totalMognetki: profileRef.current.totalMognetki + coins };
       saveProfile(next); setLastRun(result); setScene('gameover');
 
-      // Пушим результат в базу данных через FastAPI эндпоинт
       try {
         await fetch(`${BACKEND_URL}/api/save_score`, {
           method: 'POST',
