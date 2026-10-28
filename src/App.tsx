@@ -9,11 +9,19 @@ type GameObject = { x: number; kind: ObstacleKind; scale: number; level: 'low' |
 
 const STORAGE_KEY = 'mognitke-runner-profile';
 const MUTE_KEY = 'mognitke-runner-muted';
+// АДРЕС НАШЕГО РАБОЧЕГО БЭКЕНДА НА HUGGING FACE
+const BACKEND_URL = 'https://iglobrux-mognitke-bot.hf.space';
+
+// Безопасное получение данных пользователя из Telegram WebApp SDK
+const tg = (window as any).Telegram?.WebApp;
+const tgUser = tg?.initDataUnsafe?.user;
+const DEFAULT_USER_ID = tgUser?.id || 99999; 
+const DEFAULT_USERNAME = tgUser?.username || tgUser?.first_name || 'Игрок';
 
 function CoinIcon({ size = 16 }: { size?: number }) { return <span className="coin-icon" style={{ width: size, height: size }} />; }
 
 function readProfile(): Profile {
-  const fallback: Profile = { nickname: 'Игрок', characters: [], activeId: '', maxDistance: 0, totalMognetki: 0 };
+  const fallback: Profile = { nickname: DEFAULT_USERNAME, characters: [], activeId: '', maxDistance: 0, totalMognetki: 0 };
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) return { ...fallback, ...JSON.parse(stored) };
@@ -145,12 +153,33 @@ function App() {
     };
     const sourceOf = (image: HTMLImageElement) => { cleanWhite(image); return transparentAssets.get(image) || image; };
     const groundY = () => height - Math.max(56, height * 0.12);
-    const finish = () => {
+    
+    // ОТПРАВКА РЕКОРДА НА БЭКЕНД HUGGING FACE ПРИ ПРОИГРЫШЕ
+    const finish = async () => {
       lost = true;
-      const result = { distance: Math.floor(distance), mognetki: coins };
-      const next = { ...profileRef.current, maxDistance: Math.max(profileRef.current.maxDistance, result.distance), totalMognetki: profileRef.current.totalMognetki + coins };
+      const finalDistance = Math.floor(distance);
+      const result = { distance: finalDistance, mognetki: coins };
+      const next = { ...profileRef.current, maxDistance: Math.max(profileRef.current.maxDistance, finalDistance), totalMognetki: profileRef.current.totalMognetki + coins };
       saveProfile(next); setLastRun(result); setScene('gameover');
+
+      // Пушим результат в базу данных через FastAPI эндпоинт
+      try {
+        await fetch(`${BACKEND_URL}/api/save_score`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: DEFAULT_USER_ID,
+            username: DEFAULT_USER_ID === 99999 ? 'Локальный Тест' : DEFAULT_USERNAME,
+            distance: finalDistance,
+            mognetki: coins
+          })
+        });
+        console.log('Рекорд успешно сохранен на сервере!');
+      } catch (err) {
+        console.error('Ошибка сохранения на бэкенд:', err);
+      }
     };
+
     const spawn = () => {
       const roll = Math.random();
       if (roll < 0.22) {
